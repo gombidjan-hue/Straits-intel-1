@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STRAITS INTELLIGENCE — Global Maritime & Air Threat Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-void: #020408;
+    --bg-deep: #050c14;
+    --bg-panel: #070f1a;
+    --bg-card: #0a1520;
+    --border-dim: rgba(0,180,255,0.12);
+    --border-glow: rgba(0,180,255,0.4);
+    --cyan: #00b4ff;
+    --cyan-dim: rgba(0,180,255,0.15);
+    --red: #ff2a2a;
+    --red-dim: rgba(255,42,42,0.15);
+    --orange: #ff7a00;
+    --orange-dim: rgba(255,122,0,0.15);
+    --gold: #ffd000;
+    --gold-dim: rgba(255,208,0,0.12);
+    --green: #00ff88;
+    --green-dim: rgba(0,255,136,0.1);
+    --text-primary: #e8f4ff;
+    --text-secondary: #6a9ac4;
+    --text-dim: #2a4a6a;
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-ui: 'Rajdhani', sans-serif;
+    --font-head: 'Orbitron', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* HEADER */
+  header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: linear-gradient(90deg, #020c18 0%, #030e1c 50%, #020c18 100%);
+    border-bottom: 1px solid var(--border-dim);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 100;
+    box-shadow: 0 0 40px rgba(0,50,100,0.4);
+  }
+
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo-mark { width: 36px; height: 36px; }
+  .logo-mark svg { width: 100%; height: 100%; }
+
+  .platform-name {
+    font-family: var(--font-head);
+    font-size: 18px; font-weight: 900;
+    letter-spacing: 4px; color: var(--cyan);
+    text-shadow: 0 0 20px rgba(0,180,255,0.5);
+  }
+
+  .platform-sub {
+    font-family: var(--font-mono);
+    font-size: 10px; color: var(--text-secondary);
+    letter-spacing: 2px; margin-top: 2px;
+  }
+
+  .header-center { display: flex; gap: 24px; align-items: center; }
+
+  .threat-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 12px; border-radius: 2px;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px;
+  }
+  .threat-badge.critical { background: var(--red-dim); border: 1px solid rgba(255,42,42,0.3); color: var(--red); }
+  .threat-badge.elevated { background: var(--orange-dim); border: 1px solid rgba(255,122,0,0.3); color: var(--orange); }
+  .threat-badge.normal { background: var(--green-dim); border: 1px solid rgba(0,255,136,0.3); color: var(--green); }
+
+  .pulse-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .header-right { display: flex; align-items: center; gap: 20px; }
+
+  .utc-clock {
+    font-family: var(--font-mono); font-size: 13px;
+    color: var(--cyan); letter-spacing: 2px;
+  }
+
+  .status-bar { display: flex; gap: 12px; }
+  .status-item { font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); letter-spacing: 1px; }
+  .status-item span.live { color: var(--green); }
+  .status-item span.pending { color: var(--text-dim); }
+  .status-item span.connecting { color: var(--gold); animation: pulse 1s infinite; }
+  .status-item span.error { color: var(--red); }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr 280px;
+    grid-template-rows: 56px 1fr 180px;
+    height: 100vh; width: 100vw;
+  }
+
+  /* LEFT PANEL */
+  .panel-left {
+    grid-column: 1; grid-row: 2;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border-dim);
+    padding: 12px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  /* CENTER MAP */
+  .map-container {
+    grid-column: 2; grid-row: 2;
+    position: relative; background: var(--bg-deep); overflow: hidden;
+  }
+
+  /* RIGHT PANEL */
+  .panel-right {
+    grid-column: 3; grid-row: 2;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border-dim);
+    padding: 12px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  /* BOTTOM BAR */
+  .bottom-bar {
+    grid-column: 1 / -1; grid-row: 3;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border-dim);
+    display: flex; gap: 0;
+  }
+
+  .panel-title {
+    font-family: var(--font-head); font-size: 10px;
+    letter-spacing: 3px; color: var(--text-secondary);
+    padding: 6px 0; border-bottom: 1px solid var(--border-dim);
+    margin-bottom: 8px; text-transform: uppercase;
+  }
+
+  /* STRAIT CARDS */
+  .strait-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-left: 3px solid transparent;
+    padding: 10px 12px; cursor: pointer;
+    transition: all 0.2s; position: relative; overflow: hidden;
+    animation: fadeIn 0.4s ease both;
+  }
+  .strait-card:hover { border-color: var(--border-glow); background: rgba(0,30,60,0.8); }
+  .strait-card.risk-critical { border-left-color: var(--red); }
+  .strait-card.risk-elevated { border-left-color: var(--orange); }
+  .strait-card.risk-moderate { border-left-color: var(--gold); }
+  .strait-card.risk-normal { border-left-color: var(--green); }
+  .strait-card.active { border-color: var(--border-glow); background: rgba(0,30,60,0.8); }
+
+  .strait-name { font-family: var(--font-head); font-size: 12px; letter-spacing: 1px; color: var(--text-primary); margin-bottom: 4px; }
+  .strait-location { font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); margin-bottom: 6px; }
+  .strait-metrics { display: flex; gap: 10px; }
+  .metric { display: flex; flex-direction: column; gap: 1px; }
+  .metric-val { font-family: var(--font-mono); font-size: 13px; color: var(--cyan); }
+  .metric-label { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+  .risk-score { position: absolute; right: 10px; top: 10px; font-family: var(--font-head); font-size: 20px; font-weight: 900; }
+  .risk-critical .risk-score { color: var(--red); text-shadow: 0 0 10px rgba(255,42,42,0.5); }
+  .risk-elevated .risk-score { color: var(--orange); text-shadow: 0 0 10px rgba(255,122,0,0.5); }
+  .risk-moderate .risk-score { color: var(--gold); text-shadow: 0 0 10px rgba(255,208,0,0.5); }
+  .risk-normal .risk-score { color: var(--green); text-shadow: 0 0 10px rgba(0,255,136,0.5); }
+
+  /* API KEY INPUT */
+  .api-input-block {
+    background: var(--bg-card);
+    border: 1px solid rgba(0,180,255,0.2);
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  .api-input-label {
+    font-family: var(--font-mono); font-size: 9px;
+    color: var(--text-secondary); letter-spacing: 2px; margin-bottom: 6px;
+  }
+
+  .api-input-row { display: flex; gap: 6px; }
+
+  .api-key-input {
+    flex: 1; background: rgba(0,10,20,0.8);
+    border: 1px solid var(--border-dim); color: var(--cyan);
+    font-family: var(--font-mono); font-size: 10px;
+    padding: 5px 8px; outline: none; letter-spacing: 1px;
+  }
+
+  .api-key-input:focus { border-color: var(--border-glow); }
+  .api-key-input::placeholder { color: var(--text-dim); }
+
+  .btn-connect {
+    background: rgba(0,180,255,0.1);
+    border: 1px solid rgba(0,180,255,0.3);
+    color: var(--cyan); font-family: var(--font-head);
+    font-size: 9px; letter-spacing: 2px; padding: 5px 10px;
+    cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+  }
+  .btn-connect:hover { background: rgba(0,180,255,0.2); box-shadow: 0 0 10px rgba(0,180,255,0.2); }
+  .btn-connect:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .ais-status {
+    font-family: var(--font-mono); font-size: 9px;
+    color: var(--text-dim); margin-top: 5px; letter-spacing: 1px;
+  }
+  .ais-status.connecting { color: var(--gold); }
+  .ais-status.connected { color: var(--green); }
+  .ais-status.error { color: var(--red); }
+
+  /* VESSEL DOT on map */
+  .vessel-dot {
+    position: absolute;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: left 2s linear, top 2s linear;
+    z-index: 20;
+  }
+  .vessel-dot::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    opacity: 0.3;
+  }
+  .vessel-dot.type-tanker { background: #ff6b00; box-shadow: 0 0 4px #ff6b00; color: #ff6b00; }
+  .vessel-dot.type-cargo { background: #00b4ff; box-shadow: 0 0 4px #00b4ff; color: #00b4ff; }
+  .vessel-dot.type-container { background: #00ff88; box-shadow: 0 0 4px #00ff88; color: #00ff88; }
+  .vessel-dot.type-military { background: #ff2a2a; box-shadow: 0 0 6px #ff2a2a; color: #ff2a2a; }
+  .vessel-dot.type-other { background: #6a9ac4; box-shadow: 0 0 3px #6a9ac4; color: #6a9ac4; }
+
+  /* VESSEL TOOLTIP */
+  .vessel-tooltip {
+    position: absolute;
+    background: rgba(5,12,20,0.97);
+    border: 1px solid var(--border-glow);
+    padding: 8px 12px;
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-primary);
+    pointer-events: none;
+    display: none; z-index: 60;
+    min-width: 200px;
+    box-shadow: 0 0 20px rgba(0,100,200,0.3);
+  }
+  .vessel-tooltip.visible { display: block; }
+  .vt-name { font-family: var(--font-head); font-size: 12px; color: var(--cyan); margin-bottom: 6px; }
+  .vt-row { display: flex; justify-content: space-between; gap: 16px; margin-top: 3px; }
+  .vt-key { color: var(--text-dim); }
+  .vt-val { color: var(--text-primary); }
+
+  /* MAP */
+  .world-map { width: 100%; height: 100%; }
+  .map-grid { stroke: rgba(0,80,140,0.15); stroke-width: 0.5; fill: none; }
+
+  .strait-marker { cursor: pointer; }
+  .marker-ring { fill: none; stroke-width: 1; opacity: 0.6; animation: ringExpand 2.5s ease-out infinite; }
+  @keyframes ringExpand {
+    0% { r: 6; opacity: 0.8; }
+    100% { r: 18; opacity: 0; }
+  }
+
+  /* MAP TOOLTIP */
+  .map-tooltip {
+    position: absolute;
+    background: rgba(5,12,20,0.95);
+    border: 1px solid var(--border-glow);
+    padding: 8px 12px;
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-primary);
+    pointer-events: none; display: none; z-index: 50;
+    min-width: 160px;
+    box-shadow: 0 0 20px rgba(0,100,200,0.3);
+  }
+  .map-tooltip.visible { display: block; }
+  .tooltip-name { font-family: var(--font-head); font-size: 12px; color: var(--cyan); margin-bottom: 4px; }
+  .tooltip-row { display: flex; justify-content: space-between; gap: 12px; margin-top: 2px; }
+  .tooltip-key { color: var(--text-dim); }
+  .tooltip-val { color: var(--text-primary); }
+
+  /* TICKER */
+  .ticker-wrap {
+    width:100%; display:flex; align-items:center;
+    padding:0 16px; height:32px; overflow:hidden;
+    position:absolute; bottom:148px; left:0; right:0;
+    background:var(--bg-panel);
+    border-top:1px solid var(--border-dim);
+    border-bottom:1px solid var(--border-dim);
+    z-index:10;
+  }
+  .ticker-label {
+    font-family: var(--font-head); font-size: 9px;
+    letter-spacing: 3px; color: var(--red);
+    white-space: nowrap; margin-right: 20px;
+    padding: 3px 8px;
+    border: 1px solid rgba(255,42,42,0.3); background: var(--red-dim);
+  }
+  .ticker-content {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-secondary); white-space: nowrap;
+    animation: tickerScroll 45s linear infinite; letter-spacing: 1px;
+  }
+  @keyframes tickerScroll { 0% { transform: translateX(100vw); } 100% { transform: translateX(-200%); } }
+  .ticker-highlight { color: var(--cyan); }
+  .ticker-alert { color: var(--orange); }
+
+  /* BOTTOM */
+  .bottom-section {
+    flex: 1; padding: 10px 14px;
+    border-right: 1px solid var(--border-dim);
+    display: flex; flex-direction: column; gap: 6px; overflow: hidden;
+  }
+  .bottom-section:last-child { border-right: none; }
+  .section-label {
+    font-family: var(--font-head); font-size: 9px;
+    letter-spacing: 3px; color: var(--text-secondary);
+    text-transform: uppercase;
+    padding-bottom: 6px; border-bottom: 1px solid var(--border-dim);
+  }
+
+  .alert-item { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(0,30,60,0.5); }
+  .alert-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .alert-dot.red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .alert-dot.orange { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+  .alert-dot.gold { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+  .alert-text { font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); line-height: 1.5; }
+  .alert-time { font-size: 9px; color: var(--text-dim); margin-top: 2px; }
+
+  .vessel-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 0; border-bottom: 1px solid rgba(0,30,60,0.4);
+    font-family: var(--font-mono); font-size: 10px;
+  }
+  .vessel-name { color: var(--cyan); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 110px; }
+  .vessel-type { color: var(--text-dim); font-size: 9px; }
+  .vessel-status { padding: 1px 6px; border-radius: 1px; font-size: 9px; }
+  .vessel-status.transiting { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+  .vessel-status.anchored { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(255,208,0,0.2); }
+  .vessel-status.alert { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,42,42,0.2); }
+
+  /* INTEL FEED */
+  .intel-item { background: var(--bg-card); border: 1px solid var(--border-dim); padding: 8px 10px; margin-bottom: 6px; }
+  .intel-source { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 4px; }
+  .intel-headline { font-size: 11px; color: var(--text-primary); line-height: 1.4; margin-bottom: 4px; }
+  .intel-score { display: flex; align-items: center; gap: 6px; }
+  .score-bar { flex: 1; height: 3px; background: rgba(0,50,100,0.5); border-radius: 2px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .score-fill.high { background: linear-gradient(90deg, var(--orange), var(--red)); }
+  .score-fill.medium { background: linear-gradient(90deg, var(--gold), var(--orange)); }
+  .score-fill.low { background: linear-gradient(90deg, var(--green), var(--cyan)); }
+  .score-val { font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); width: 30px; text-align: right; }
+
+  .cta-exfil {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    background: linear-gradient(90deg, rgba(255,42,42,0.15), rgba(255,42,42,0.05));
+    border: 1px solid rgba(255,42,42,0.4); color: var(--red);
+    font-family: var(--font-head); font-size: 10px; letter-spacing: 2px;
+    cursor: pointer; margin-top: 8px; text-transform: uppercase;
+    transition: all 0.2s; width: 100%; justify-content: center;
+  }
+  .cta-exfil:hover { background: linear-gradient(90deg, rgba(255,42,42,0.25), rgba(255,42,42,0.1)); box-shadow: 0 0 20px rgba(255,42,42,0.2); }
+
+  .cta-reroute {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    background: linear-gradient(90deg, rgba(0,180,255,0.1), rgba(0,180,255,0.05));
+    border: 1px solid rgba(0,180,255,0.3); color: var(--cyan);
+    font-family: var(--font-head); font-size: 10px; letter-spacing: 2px;
+    cursor: pointer; margin-top: 6px; text-transform: uppercase;
+    transition: all 0.2s; width: 100%; justify-content: center;
+  }
+  .cta-reroute:hover { background: linear-gradient(90deg, rgba(0,180,255,0.2), rgba(0,180,255,0.1)); box-shadow: 0 0 20px rgba(0,180,255,0.2); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg-void); }
+  ::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 2px; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* AIS COUNTER BADGE */
+  .ais-live-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--green-dim);
+    border: 1px solid rgba(0,255,136,0.3);
+    padding: 2px 8px;
+    font-family: var(--font-mono); font-size: 9px;
+    color: var(--green); letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* VESSEL LEGEND */
+  .legend {
+    position: absolute; bottom: 14px; right: 12px;
+    display: flex; flex-direction: column; gap: 4px;
+    background: rgba(2,4,8,0.7);
+    border: 1px solid var(--border-dim);
+    padding: 8px 10px; z-index: 30;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 9px; color: var(--text-secondary); }
+  .legend-dot { width: 7px; height: 7px; border-radius: 50%; }
+  /* AIRCRAFT DOT */
+  .aircraft-dot {
+    position: absolute;
+    width: 8px; height: 8px;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    pointer-events: auto;
+    z-index: 25;
+  }
+  .aircraft-dot::before {
+    content: "";
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%) rotate(var(--hdg, 0deg));
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 8px solid currentColor;
+  }
+  .aircraft-dot.type-civil { color: #00cfff; filter: drop-shadow(0 0 3px #00cfff); }
+  .aircraft-dot.type-military { color: #ff2a2a; filter: drop-shadow(0 0 4px #ff2a2a); }
+  .aircraft-dot.type-cargo { color: #ffd000; filter: drop-shadow(0 0 3px #ffd000); }
+  .aircraft-dot.type-heli { color: #ff7a00; filter: drop-shadow(0 0 3px #ff7a00); }
+  .aircraft-dot.type-unknown { color: #6a9ac4; }
+
+  /* ADSB STATUS */
+  .adsb-status-bar {
+    background: var(--bg-card);
+    border: 1px solid rgba(0,207,255,0.2);
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .adsb-label { font-family: var(--font-mono); font-size: 9px; color: var(--text-secondary); letter-spacing: 2px; }
+  .adsb-count { font-family: var(--font-head); font-size: 16px; color: #00cfff; font-weight: 900; }
+
+  /* AIRCRAFT LEGEND */
+  .legend-aircraft { border-top: 1px solid var(--border-dim); margin-top: 6px; padding-top: 6px; }
+  /* EP5 — MODAL EXFILTRATION */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal-box {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    width: 90%; max-width: 680px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 24px;
+    position: relative;
+    box-shadow: 0 0 60px rgba(0,180,255,0.2);
+  }
+  .modal-title {
+    font-family: var(--font-head);
+    font-size: 16px; font-weight: 900;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-dim);
+  }
+  .modal-title.red { color: var(--red); text-shadow: 0 0 20px rgba(255,42,42,0.4); }
+  .modal-title.cyan { color: var(--cyan); text-shadow: 0 0 20px rgba(0,180,255,0.4); }
+  .modal-close {
+    position: absolute; top: 16px; right: 16px;
+    background: none; border: 1px solid var(--border-dim);
+    color: var(--text-secondary); font-family: var(--font-mono);
+    font-size: 12px; padding: 4px 10px; cursor: pointer;
+  }
+  .modal-close:hover { border-color: var(--border-glow); color: var(--text-primary); }
+  .modal-section { margin-bottom: 20px; }
+  .modal-section-title {
+    font-family: var(--font-head); font-size: 10px;
+    letter-spacing: 3px; color: var(--text-secondary);
+    margin-bottom: 10px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-dim);
+    text-transform: uppercase;
+  }
+  .risk-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-bottom: 16px;
+  }
+  .risk-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    padding: 12px; text-align: center;
+  }
+  .risk-card-val {
+    font-family: var(--font-head); font-size: 24px;
+    font-weight: 900; margin-bottom: 4px;
+  }
+  .risk-card-label {
+    font-family: var(--font-mono); font-size: 9px;
+    color: var(--text-dim); letter-spacing: 1px;
+  }
+  .route-option {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-left: 3px solid transparent;
+    padding: 12px 14px; margin-bottom: 8px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .route-option:hover { border-color: var(--border-glow); }
+  .route-option.recommended { border-left-color: var(--green); }
+  .route-option.alternative { border-left-color: var(--gold); }
+  .route-option.emergency { border-left-color: var(--red); }
+  .route-name {
+    font-family: var(--font-head); font-size: 12px;
+    color: var(--text-primary); margin-bottom: 4px;
+  }
+  .route-details {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-secondary); line-height: 1.6;
+  }
+  .route-badge {
+    display: inline-block; padding: 2px 8px;
+    font-family: var(--font-mono); font-size: 9px;
+    border-radius: 1px; margin-left: 8px;
+  }
+  .route-badge.safe { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .route-badge.moderate { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(255,208,0,0.3); }
+  .route-badge.high { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,42,42,0.3); }
+  .smp-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,42,42,0.2);
+    padding: 10px 14px; margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .smp-name { font-family: var(--font-head); font-size: 11px; color: var(--text-primary); }
+  .smp-details { font-family: var(--font-mono); font-size: 9px; color: var(--text-secondary); margin-top: 3px; }
+  .smp-eta {
+    font-family: var(--font-head); font-size: 14px;
+    color: var(--red); font-weight: 900;
+  }
+  .insurance-table {
+    width: 100%; border-collapse: collapse;
+    font-family: var(--font-mono); font-size: 10px;
+  }
+  .insurance-table th {
+    text-align: left; padding: 6px 10px;
+    border-bottom: 1px solid var(--border-dim);
+    color: var(--text-dim); font-size: 9px;
+    letter-spacing: 1px; font-weight: normal;
+  }
+  .insurance-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(0,30,60,0.4);
+    color: var(--text-secondary);
+  }
+  .insurance-table td.val { color: var(--text-primary); }
+  .insurance-table td.high { color: var(--red); }
+  .insurance-table td.med { color: var(--orange); }
+  .insurance-table td.low { color: var(--green); }
+  .btn-action {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; margin-top: 8px; margin-right: 8px;
+    font-family: var(--font-head); font-size: 10px;
+    letter-spacing: 2px; cursor: pointer;
+    text-transform: uppercase; transition: all 0.2s;
+    border: none;
+  }
+  .btn-action.red { background: rgba(255,42,42,0.15); border: 1px solid rgba(255,42,42,0.4); color: var(--red); }
+  .btn-action.red:hover { background: rgba(255,42,42,0.25); box-shadow: 0 0 20px rgba(255,42,42,0.2); }
+  .btn-action.cyan { background: rgba(0,180,255,0.1); border: 1px solid rgba(0,180,255,0.3); color: var(--cyan); }
+  .btn-action.cyan:hover { background: rgba(0,180,255,0.2); box-shadow: 0 0 20px rgba(0,180,255,0.2); }
+  .btn-action.green { background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); color: var(--green); }
+  .btn-action.green:hover { background: rgba(0,255,136,0.2); box-shadow: 0 0 20px rgba(0,255,136,0.2); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <div class="logo-mark">
+      <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="16" stroke="#00b4ff" stroke-width="1" opacity="0.4"/>
+        <circle cx="18" cy="18" r="10" stroke="#00b4ff" stroke-width="1" opacity="0.6"/>
+        <circle cx="18" cy="18" r="4" fill="#00b4ff" opacity="0.8"/>
+        <line x1="18" y1="2" x2="18" y2="8" stroke="#00b4ff" stroke-width="1"/>
+        <line x1="18" y1="28" x2="18" y2="34" stroke="#00b4ff" stroke-width="1"/>
+        <line x1="2" y1="18" x2="8" y2="18" stroke="#00b4ff" stroke-width="1"/>
+        <line x1="28" y1="18" x2="34" y2="18" stroke="#00b4ff" stroke-width="1"/>
+      </svg>
+    </div>
+    <div>
+      <div class="platform-name">STRAITS INTEL</div>
+      <div class="platform-sub">GLOBAL THREAT MONITORING SYSTEM v5.0 — STRAITS INTEL FULL PLATFORM</div>
+    </div>
+  </div>
+  <div class="header-center">
+    <div class="threat-badge critical"><div class="pulse-dot"></div>HORMUZ · CRITICAL</div>
+    <div class="threat-badge elevated"><div class="pulse-dot"></div>BAB-EL-MANDEB · ELEVATED</div>
+    <div class="threat-badge normal"><div class="pulse-dot"></div>GIBRALTAR · NOMINAL</div>
+  </div>
+  <div class="header-right">
+    <div class="status-bar">
+      <div class="status-item">AIS <span id="aisStatusBadge" class="pending">OFF</span></div>
+      <div class="status-item">ADS-B <span id="adsbStatusBadge" class="pending">OFF</span></div>
+      <div class="status-item">RSS <span id="rssStatusBadge" class="pending">OFF</span></div>
+      <div class="status-item">VESSELS <span id="vesselCountHeader" class="pending">0</span></div>
+      <div class="status-item">AIRCRAFT <span id="acCountHeader" class="pending">0</span></div>
+      <div class="status-item">AIRCRAFT <span id="acCountHeader" class="pending">0</span></div>
+    </div>
+    <div class="utc-clock" id="utcClock">UTC 00:00:00</div>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- LEFT PANEL -->
+  <div class="panel-left">
+    <div class="panel-title">▸ Détroits Stratégiques</div>
+
+    <!-- AIS API KEY INPUT -->
+    <div class="api-input-block">
+      <div class="api-input-label">⬡ AISSTREAM.IO — CLÉ API</div>
+      <div class="api-input-row">
+        <input type="password" class="api-key-input" id="apiKeyInput" placeholder="Collez votre clé API ici..." />
+        <button class="btn-connect" id="btnConnect" onclick="connectAIS()">CONNECT</button>
+      </div>
+      <div class="ais-status" id="aisStatusText">● Déconnecté — entrez votre clé API AisStream</div>
+      <div id="adsbStatusText" class="ais-status" style="margin-top:4px;">● ADS-B OpenSky...</div>
+    <div id="rssStatusText" class="ais-status" style="margin-top:4px;">● RSS - demarrage auto...</div>
+    <div id="aisLiveBadge" style="display:none;" class="ais-live-badge">
+        <div class="pulse-dot" style="width:5px;height:5px;"></div>
+        AIS LIVE · <span id="aisVesselCount">0</span> navires reçus
+      </div>
+    </div>
+
+    <!-- STRAIT CARDS -->
+    <div class="strait-card risk-critical" id="card-hormuz" onclick="focusStrait('hormuz')">
+      <div class="strait-name">HORMUZ</div>
+      <div class="strait-location">Golfe Persique / Oman</div>
+      <div class="strait-metrics">
+        <div class="metric"><div class="metric-val" id="count-hormuz">—</div><div class="metric-label">Navires</div></div>
+        <div class="metric"><div class="metric-val" id="acount-hormuz">-</div><div class="metric-label">Aéronefs</div></div>
+        <div class="metric"><div class="metric-val">3</div><div class="metric-label">Alertes</div></div>
+      </div>
+      <div class="risk-score">94</div>
+    </div>
+
+    <div class="strait-card risk-critical" id="card-bab" onclick="focusStrait('bab')">
+      <div class="strait-name">BAB-EL-MANDEB</div>
+      <div class="strait-location">Mer Rouge / Djibouti</div>
+      <div class="strait-metrics">
+        <div class="metric"><div class="metric-val" id="count-bab">—</div><div class="metric-label">Navires</div></div>
+        <div class="metric"><div class="metric-val" id="acount-bab">-</div><div class="metric-label">Aéronefs</div></div>
+        <div class="metric"><div class="metric-val">5</div><div class="metric-label">Alertes</div></div>
+      </div>
+      <div class="risk-score">87</div>
+    </div>
+
+    <div class="strait-card risk-elevated" id="card-taiwan" onclick="focusStrait('taiwan')">
+      <div class="strait-name">TAÏWAN</div>
+      <div class="strait-location">Mer de Chine / Pacifique</div>
+      <div class="strait-metrics">
+        <div class="metric"><div class="metric-val" id="count-taiwan">—</div><div class="metric-label">Navires</div></div>
+        <div class="metric"><div class="metric-val" id="acount-taiwan">-</div><div class="metric-label">Aéronefs</div></div>
+        <div class="metric"><div class="metric-val">2</div><div class="metric-label">Alertes</div></div>
+      </div>
+      <div class="risk-score">72</div>
+    </div>
+
+    <div class="strait-card risk-elevated" id="card-malacca" onclick="focusStrait('malacca')">
+      <div class="strait-name">MALACCA</div>
+      <div class="strait-location">Indonésie / Malaisie</div>
+      <div class="strait-metrics">
+        <div class="metric"><div class="metric-val" id="count-malacca">—</div><div class="metric-label">Navires</div></div>
+        <div class="metric"><div class="metric-val" id="acount-malacca">-</div><div class="metric-label">Aéronefs</div></div>
+        <div class="metric"><div class="metric-val">1</div><div class="metric-label">Alertes</div></div>
+      </div>
+      <div class="risk-score">61</div>
+    </div>
+
+    <div class="strait-card risk-moderate" id="card-bosphore" onclick="focusStrait('bosphore')">
+      <div class="strait-name">BOSPHORE</div>
+      <div class="strait-location">Turquie / Mer Noire</div>
+      <div class="strait-metrics">
+        <div class="metric"><div class="metric-val" id="count-bosphore">—</div><div class="metric-label">Navires</div></div>
+        <div class="metric"><div class="metric-val" id="acount-bosphore">-</div><div class="metric-label">Aéronefs</div></div>
+        <div class="metric"><div class="metric-val">1</div><div class="metric-label">Alertes</div></div>
+      </div>
+      <div class="risk-score">48</div>
+    </div>
+
+    <div class="strait-card risk-moderate" id="card-suez" onclick="focusStrait('suez')">
+      <div class="strait-name">SUEZ</div>
+      <div class="strait-location">Égypte / Mer Rouge</div>
+      <div class="strait-metrics">
+        <div class="metric"><div class="metric-val" id="count-suez">—</div><div class="metric-label">Navires</div></div>
+        <div class="metric"><div class="metric-val" id="acount-suez">-</div><div class="metric-label">Aéronefs</div></div>
+        <div class="metric"><div class="metric-val">0</div><div class="metric-label">Alertes</div></div>
+      </div>
+      <div class="risk-score">41</div>
+    </div>
+
+    <div class="strait-card risk-normal" id="card-gibraltar" onclick="focusStrait('gibraltar')">
+      <div class="strait-name">GIBRALTAR</div>
+      <div class="strait-location">Maroc / Espagne</div>
+      <div class="strait-metrics">
+        <div class="metric"><div class="metric-val" id="count-gibraltar">—</div><div class="metric-label">Navires</div></div>
+        <div class="metric"><div class="metric-val" id="acount-gibraltar">-</div><div class="metric-label">Aéronefs</div></div>
+        <div class="metric"><div class="metric-val">0</div><div class="metric-label">Alertes</div></div>
+      </div>
+      <div class="risk-score">18</div>
+    </div>
+
+    <div class="strait-card risk-normal" id="card-dover" onclick="focusStrait('dover')">
+      <div class="strait-name">DOVER</div>
+      <div class="strait-location">Royaume-Uni / France</div>
+      <div class="strait-metrics">
+        <div class="metric"><div class="metric-val" id="count-dover">—</div><div class="metric-label">Navires</div></div>
+        <div class="metric"><div class="metric-val" id="acount-dover">-</div><div class="metric-label">Aéronefs</div></div>
+        <div class="metric"><div class="metric-val">0</div><div class="metric-label">Alertes</div></div>
+      </div>
+      <div class="risk-score">12</div>
+    </div>
+  </div>
+
+  <!-- CENTER MAP -->
+  <div class="map-container" id="mapContainer">
+    <svg class="world-map" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" id="worldMap">
+      <defs>
+        <radialGradient id="mapBg" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#061220"/>
+          <stop offset="100%" stop-color="#020408"/>
+        </radialGradient>
+        <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="glowStrong"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <rect width="1000" height="500" fill="url(#mapBg)"/>
+      <!-- Grid -->
+      <g class="map-grid">
+        <line x1="0" y1="125" x2="1000" y2="125"/><line x1="0" y1="250" x2="1000" y2="250"/>
+        <line x1="0" y1="375" x2="1000" y2="375"/><line x1="125" y1="0" x2="125" y2="500"/>
+        <line x1="250" y1="0" x2="250" y2="500"/><line x1="375" y1="0" x2="375" y2="500"/>
+        <line x1="500" y1="0" x2="500" y2="500"/><line x1="625" y1="0" x2="625" y2="500"/>
+        <line x1="750" y1="0" x2="750" y2="500"/><line x1="875" y1="0" x2="875" y2="500"/>
+      </g>
+      <line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(0,180,255,0.08)" stroke-width="1" stroke-dasharray="4,8"/>
+
+      <!-- Continents -->
+      <path d="M 95 80 L 200 75 L 220 100 L 240 120 L 230 160 L 200 190 L 180 220 L 160 250 L 140 240 L 120 210 L 100 180 L 85 150 L 80 120 Z" fill="rgba(0,60,100,0.35)" stroke="rgba(0,120,180,0.3)" stroke-width="0.5"/>
+      <path d="M 160 250 L 190 260 L 200 280 L 185 270 L 170 265 Z" fill="rgba(0,60,100,0.35)" stroke="rgba(0,120,180,0.3)" stroke-width="0.5"/>
+      <path d="M 200 280 L 260 270 L 290 290 L 300 330 L 285 380 L 260 420 L 235 440 L 215 420 L 200 380 L 195 340 L 200 310 Z" fill="rgba(0,60,100,0.35)" stroke="rgba(0,120,180,0.3)" stroke-width="0.5"/>
+      <path d="M 200 30 L 240 25 L 260 40 L 250 65 L 220 70 L 200 55 Z" fill="rgba(0,60,100,0.25)" stroke="rgba(0,120,180,0.2)" stroke-width="0.5"/>
+      <path d="M 420 70 L 480 65 L 510 80 L 520 100 L 500 120 L 480 130 L 460 125 L 440 115 L 420 105 Z" fill="rgba(0,60,100,0.35)" stroke="rgba(0,120,180,0.3)" stroke-width="0.5"/>
+      <path d="M 460 40 L 490 35 L 500 55 L 480 70 L 460 65 Z" fill="rgba(0,60,100,0.3)" stroke="rgba(0,120,180,0.2)" stroke-width="0.5"/>
+      <path d="M 420 75 L 435 70 L 440 85 L 430 92 L 420 88 Z" fill="rgba(0,60,100,0.3)" stroke="rgba(0,120,180,0.25)" stroke-width="0.5"/>
+      <path d="M 440 145 L 510 135 L 540 155 L 555 200 L 550 260 L 530 320 L 510 370 L 490 390 L 465 380 L 445 350 L 430 300 L 420 250 L 415 200 L 420 170 Z" fill="rgba(0,60,100,0.35)" stroke="rgba(0,120,180,0.3)" stroke-width="0.5"/>
+      <path d="M 540 155 L 600 145 L 630 165 L 625 200 L 600 220 L 570 215 L 550 200 Z" fill="rgba(0,60,100,0.35)" stroke="rgba(0,120,180,0.3)" stroke-width="0.5"/>
+      <path d="M 480 40 L 620 30 L 750 45 L 800 65 L 780 100 L 700 110 L 620 105 L 550 110 L 510 100 L 490 75 Z" fill="rgba(0,60,100,0.35)" stroke="rgba(0,120,180,0.3)" stroke-width="0.5"/>
+      <path d="M 620 155 L 670 150 L 685 185 L 670 225 L 650 240 L 630 220 L 615 190 Z" fill="rgba(0,60,100,0.35)" stroke="rgba(0,120,180,0.3)" stroke-width="0.5"/>
+      <path d="M 730 155 L 800 150 L 820 175 L 800 200 L 760 205 L 735 190 Z" fill="rgba(0,60,100,0.35)" stroke="rgba(0,120,180,0.3)" stroke-width="0.5"/>
+      <path d="M 710 85 L 820 80 L 860 105 L 850 145 L 810 160 L 760 155 L 720 140 L 700 115 Z" fill="rgba(0,60,100,0.35)" stroke="rgba(0,120,180,0.3)" stroke-width="0.5"/>
+      <path d="M 855 100 L 875 95 L 880 115 L 865 125 L 855 115 Z" fill="rgba(0,60,100,0.3)" stroke="rgba(0,120,180,0.25)" stroke-width="0.5"/>
+      <path d="M 780 300 L 870 290 L 900 320 L 895 370 L 865 390 L 820 390 L 785 360 L 770 330 Z" fill="rgba(0,60,100,0.35)" stroke="rgba(0,120,180,0.3)" stroke-width="0.5"/>
+
+      <!-- Shipping routes -->
+      <g stroke="rgba(0,180,255,0.1)" stroke-width="0.8" stroke-dasharray="3,6" fill="none">
+        <path d="M 450 110 Q 500 175 555 185 Q 590 215 615 195 Q 640 175 670 185 Q 710 185 760 185 Q 820 185 855 175 Q 890 165 920 170"/>
+        <path d="M 435 110 Q 350 130 280 160 Q 220 185 180 200"/>
+        <path d="M 510 370 Q 540 420 560 450 Q 600 470 650 460 Q 700 450 760 390"/>
+        <path d="M 520 200 Q 530 230 520 270 Q 510 300 505 320"/>
+      </g>
+
+      <!-- STRAIT MARKERS -->
+      <g class="strait-marker" id="m-hormuz" onmouseenter="showTooltip(event,'HORMUZ','Golfe Persique','— navires AIS','CRITIQUE — 94/100')" onmouseleave="hideTooltip()" onclick="focusStrait('hormuz')">
+        <circle cx="615" cy="190" r="14" fill="rgba(255,42,42,0.08)" stroke="rgba(255,42,42,0.4)" stroke-width="1"/>
+        <circle class="marker-ring" cx="615" cy="190" stroke="rgba(255,42,42,0.6)" fill="none"/>
+        <circle cx="615" cy="190" r="5" fill="#ff2a2a" filter="url(#glow)"/>
+        <text x="615" y="210" text-anchor="middle" font-family="'Orbitron',sans-serif" font-size="7" fill="rgba(255,42,42,0.8)" letter-spacing="1">HORMUZ</text>
+      </g>
+
+      <g class="strait-marker" id="m-bab" onmouseenter="showTooltip(event,'BAB-EL-MANDEB','Mer Rouge / Djibouti','— navires AIS','CRITIQUE — 87/100')" onmouseleave="hideTooltip()" onclick="focusStrait('bab')">
+        <circle cx="555" cy="225" r="14" fill="rgba(255,42,42,0.08)" stroke="rgba(255,42,42,0.35)" stroke-width="1"/>
+        <circle class="marker-ring" cx="555" cy="225" stroke="rgba(255,42,42,0.5)" fill="none"/>
+        <circle cx="555" cy="225" r="5" fill="#ff2a2a" filter="url(#glow)"/>
+        <text x="555" y="245" text-anchor="middle" font-family="'Orbitron',sans-serif" font-size="6" fill="rgba(255,42,42,0.8)" letter-spacing="0.5">BAB-EL-MANDEB</text>
+      </g>
+
+      <g class="strait-marker" id="m-taiwan" onmouseenter="showTooltip(event,'TAÏWAN','Mer de Chine','— navires AIS','ÉLEVÉ — 72/100')" onmouseleave="hideTooltip()" onclick="focusStrait('taiwan')">
+        <circle cx="830" cy="155" r="14" fill="rgba(255,122,0,0.08)" stroke="rgba(255,122,0,0.35)" stroke-width="1"/>
+        <circle class="marker-ring" cx="830" cy="155" stroke="rgba(255,122,0,0.5)" fill="none"/>
+        <circle cx="830" cy="155" r="5" fill="#ff7a00" filter="url(#glow)"/>
+        <text x="830" y="175" text-anchor="middle" font-family="'Orbitron',sans-serif" font-size="7" fill="rgba(255,122,0,0.8)" letter-spacing="0.5">TAÏWAN</text>
+      </g>
+
+      <g class="strait-marker" id="m-malacca" onmouseenter="showTooltip(event,'MALACCA','Indonésie / Malaisie','— navires AIS','ÉLEVÉ — 61/100')" onmouseleave="hideTooltip()" onclick="focusStrait('malacca')">
+        <circle cx="765" cy="230" r="14" fill="rgba(255,122,0,0.08)" stroke="rgba(255,122,0,0.3)" stroke-width="1"/>
+        <circle class="marker-ring" cx="765" cy="230" stroke="rgba(255,122,0,0.4)" fill="none"/>
+        <circle cx="765" cy="230" r="5" fill="#ff7a00" filter="url(#glow)"/>
+        <text x="765" y="250" text-anchor="middle" font-family="'Orbitron',sans-serif" font-size="7" fill="rgba(255,122,0,0.8)" letter-spacing="0.5">MALACCA</text>
+      </g>
+
+      <g class="strait-marker" id="m-bosphore" onmouseenter="showTooltip(event,'BOSPHORE','Turquie','— navires AIS','MODÉRÉ — 48/100')" onmouseleave="hideTooltip()" onclick="focusStrait('bosphore')">
+        <circle cx="530" cy="110" r="12" fill="rgba(255,208,0,0.08)" stroke="rgba(255,208,0,0.3)" stroke-width="1"/>
+        <circle class="marker-ring" cx="530" cy="110" stroke="rgba(255,208,0,0.4)" fill="none"/>
+        <circle cx="530" cy="110" r="4" fill="#ffd000" filter="url(#glow)"/>
+        <text x="530" y="128" text-anchor="middle" font-family="'Orbitron',sans-serif" font-size="7" fill="rgba(255,208,0,0.8)" letter-spacing="0.5">BOSPHORE</text>
+      </g>
+
+      <g class="strait-marker" id="m-suez" onmouseenter="showTooltip(event,'SUEZ','Égypte','— navires AIS','MODÉRÉ — 41/100')" onmouseleave="hideTooltip()" onclick="focusStrait('suez')">
+        <circle cx="520" cy="162" r="12" fill="rgba(255,208,0,0.08)" stroke="rgba(255,208,0,0.25)" stroke-width="1"/>
+        <circle class="marker-ring" cx="520" cy="162" stroke="rgba(255,208,0,0.3)" fill="none"/>
+        <circle cx="520" cy="162" r="4" fill="#ffd000" filter="url(#glow)"/>
+        <text x="520" y="180" text-anchor="middle" font-family="'Orbitron',sans-serif" font-size="7" fill="rgba(255,208,0,0.8)" letter-spacing="0.5">SUEZ</text>
+      </g>
+
+      <g class="strait-marker" id="m-gibraltar" onmouseenter="showTooltip(event,'GIBRALTAR','Maroc / Espagne','— navires AIS','NOMINAL — 18/100')" onmouseleave="hideTooltip()" onclick="focusStrait('gibraltar')">
+        <circle cx="425" cy="135" r="12" fill="rgba(0,255,136,0.06)" stroke="rgba(0,255,136,0.3)" stroke-width="1"/>
+        <circle class="marker-ring" cx="425" cy="135" stroke="rgba(0,255,136,0.4)" fill="none"/>
+        <circle cx="425" cy="135" r="4" fill="#00ff88" filter="url(#glow)"/>
+        <text x="425" y="153" text-anchor="middle" font-family="'Orbitron',sans-serif" font-size="7" fill="rgba(0,255,136,0.8)" letter-spacing="0.5">GIBRALTAR</text>
+      </g>
+
+      <g class="strait-marker" id="m-dover" onmouseenter="showTooltip(event,'DOVER','UK / France','— navires AIS','NOMINAL — 12/100')" onmouseleave="hideTooltip()" onclick="focusStrait('dover')">
+        <circle cx="440" cy="88" r="12" fill="rgba(0,255,136,0.06)" stroke="rgba(0,255,136,0.25)" stroke-width="1"/>
+        <circle class="marker-ring" cx="440" cy="88" stroke="rgba(0,255,136,0.3)" fill="none"/>
+        <circle cx="440" cy="88" r="4" fill="#00ff88" filter="url(#glow)"/>
+        <text x="440" y="106" text-anchor="middle" font-family="'Orbitron',sans-serif" font-size="7" fill="rgba(0,255,136,0.8)" letter-spacing="0.5">DOVER</text>
+      </g>
+
+      <g class="strait-marker" id="m-magellan">
+        <circle cx="220" cy="430" r="10" fill="rgba(0,255,136,0.05)" stroke="rgba(0,255,136,0.2)" stroke-width="1"/>
+        <circle cx="220" cy="430" r="3" fill="#00ff88" opacity="0.7"/>
+        <text x="220" y="447" text-anchor="middle" font-family="'Orbitron',sans-serif" font-size="6" fill="rgba(0,255,136,0.6)" letter-spacing="0.5">MAGELLAN</text>
+      </g>
+
+      <!-- Corner marks -->
+      <rect x="2" y="2" width="12" height="12" fill="none" stroke="rgba(0,180,255,0.4)" stroke-width="1"/>
+      <rect x="986" y="2" width="12" height="12" fill="none" stroke="rgba(0,180,255,0.4)" stroke-width="1"/>
+      <rect x="2" y="486" width="12" height="12" fill="none" stroke="rgba(0,180,255,0.4)" stroke-width="1"/>
+      <rect x="986" y="486" width="12" height="12" fill="none" stroke="rgba(0,180,255,0.4)" stroke-width="1"/>
+      <text x="10" y="255" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(0,120,180,0.4)">EQ</text>
+      <text x="10" y="128" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(0,120,180,0.4)">45°N</text>
+      <text x="10" y="378" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(0,120,180,0.4)">45°S</text>
+    </svg>
+
+    <!-- VESSEL LAYER (dots rendered here) -->
+    <div id="vesselLayer" style="position:absolute;inset:0;pointer-events:none;z-index:20;"></div>
+    <div id="aircraftLayer" style="position:absolute;inset:0;pointer-events:none;z-index:22;"></div>
+    <div id="aircraftLayer" style="position:absolute;inset:0;pointer-events:none;z-index:22;"></div>
+
+    <!-- VESSEL TOOLTIP -->
+    <div class="vessel-tooltip" id="vesselTooltip">
+      <div class="vt-name" id="vt-name">—</div>
+      <div class="vt-row"><span class="vt-key">MMSI</span><span class="vt-val" id="vt-mmsi">—</span></div>
+      <div class="vt-row"><span class="vt-key">TYPE</span><span class="vt-val" id="vt-type">—</span></div>
+      <div class="vt-row"><span class="vt-key">VITESSE</span><span class="vt-val" id="vt-speed">—</span></div>
+      <div class="vt-row"><span class="vt-key">CAP</span><span class="vt-val" id="vt-course">—</span></div>
+      <div class="vt-row"><span class="vt-key">DÉTROIT</span><span class="vt-val" id="vt-strait">—</span></div>
+      <div class="vt-row"><span class="vt-key">ALT</span><span class="vt-val" id="vt-alt">—</span></div>
+      <div class="vt-row"><span class="vt-key">ALT</span><span class="vt-val" id="vt-alt">—</span></div>
+    </div>
+
+    <!-- MAP TOOLTIP -->
+    <div class="map-tooltip" id="mapTooltip">
+      <div class="tooltip-name" id="tt-name">-</div>
+      <div class="tooltip-row"><span class="tooltip-key">POSITION</span><span class="tooltip-val" id="tt-pos">-</span></div>
+      <div class="tooltip-row"><span class="tooltip-key">TRAFIC</span><span class="tooltip-val" id="tt-traffic">-</span></div>
+      <div class="tooltip-row"><span class="tooltip-key">RISQUE</span><span class="tooltip-val" id="tt-risk">-</span></div>
+    </div>
+
+    <!-- LEGEND -->
+    <div class="legend">
+      <div style="font-family:'Orbitron',sans-serif;font-size:8px;color:var(--text-dim);letter-spacing:2px;margin-bottom:4px;">VESSELS AIS</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6b00;box-shadow:0 0 4px #ff6b00;"></div>TANKER</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00b4ff;box-shadow:0 0 4px #00b4ff;"></div>CARGO</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00ff88;box-shadow:0 0 4px #00ff88;"></div>CONTAINER</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff2a2a;box-shadow:0 0 6px #ff2a2a;"></div>MILITAIRE</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#6a9ac4;"></div>AUTRE</div>
+      <div class="legend-aircraft">
+      <div style="font-family:'Orbitron',sans-serif;font-size:8px;color:var(--text-dim);letter-spacing:2px;margin:6px 0 4px;">AERONEFS ADS-B</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00cfff;box-shadow:0 0 4px #00cfff;"></div>CIVIL</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ffd000;box-shadow:0 0 4px #ffd000;"></div>CARGO AIR</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff2a2a;box-shadow:0 0 6px #ff2a2a;"></div>MILITAIRE</div>
+      </div>
+    </div>
+
+    <div style="position:absolute;top:10px;right:10px;">
+      <div style="font-family:'Orbitron',sans-serif;font-size:9px;color:rgba(0,180,255,0.3);letter-spacing:2px;">MERCATOR PROJECTION</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL — INTEL FEED + AIS LIST -->
+  <div class="panel-right">
+    <div class="panel-title">▸ Intel Feed — Impact Score RSS LIVE</div>
+    <div id="intelFeed">
+
+    <div class="intel-item">
+      <div class="intel-source">⬡ REUTERS · 14 MIN AGO · GOLFE PERSIQUE</div>
+      <div class="intel-headline">Exercices militaires iraniens signalés à 40km du couloir de navigation principal du détroit d'Hormuz</div>
+      <div class="intel-score">
+        <div class="score-bar"><div class="score-fill high" style="width:94%"></div></div>
+        <div class="score-val" style="color:#ff2a2a">94</div>
+      </div>
+    </div>
+
+    <div class="intel-item">
+      <div class="intel-source">⬡ AP WIRE · 28 MIN AGO · MER ROUGE</div>
+      <div class="intel-headline">Nouvelle attaque Houthi signalée à 22 nautiques au nord de Bab-el-Mandeb. 5 navires en attente</div>
+      <div class="intel-score">
+        <div class="score-bar"><div class="score-fill high" style="width:87%"></div></div>
+        <div class="score-val" style="color:#ff2a2a">87</div>
+      </div>
+    </div>
+
+    <div class="intel-item">
+      <div class="intel-source">⬡ BLOOMBERG · 1H AGO · DÉTROIT DE TAÏWAN</div>
+      <div class="intel-headline">L'APL déploie 8 frégates supplémentaires en mer de Chine orientale, surveillance aérienne renforcée</div>
+      <div class="intel-score">
+        <div class="score-bar"><div class="score-fill medium" style="width:72%"></div></div>
+        <div class="score-val" style="color:#ff7a00">72</div>
+      </div>
+    </div>
+
+    <div class="intel-item">
+      <div class="intel-source">⬡ LLOYDS LIST · 2H AGO · MALACCA</div>
+      <div class="intel-headline">Tentative de piraterie déjouée à 15nm au sud de Singapore. Alerte niveau 1 maintenue</div>
+      <div class="intel-score">
+        <div class="score-bar"><div class="score-fill medium" style="width:61%"></div></div>
+        <div class="score-val" style="color:#ff7a00">61</div>
+      </div>
+    </div>
+
+    <!-- AIS LIVE VESSEL LIST -->
+    <div class="panel-title" style="margin-top:8px;">▸ Navires AIS — Détroits Live</div>
+    <div id="aisVesselList" style="display:flex;flex-direction:column;gap:4px;overflow-y:auto;max-height:160px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);text-align:center;padding:12px;">
+        Connectez AisStream pour afficher les navires en temps réel
+      </div>
+    </div>
+
+    <button class="cta-exfil" onclick="openExfil()">⚠ PROTOCOLE EXFILTRATION</button>
+    <button class="cta-reroute" onclick="openReroute()">↻ CALCUL CONTOURNEMENT</button>
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div class="bottom-bar">
+    <!-- TICKER -->
+    <div class="ticker-wrap">
+      <div class="ticker-label">INTEL LIVE</div>
+      <div class="ticker-content" id="tickerContent">
+        <span class="ticker-alert">⚠ HORMUZ</span> · Exercices militaires iraniens en cours — déviation recommandée corridor N ·
+        <span class="ticker-highlight">TANKER PACIFIC CROWN</span> signale escorte non identifiée ·
+        <span class="ticker-alert">⚠ BAB-EL-MANDEB</span> · Attaque Houthi confirmée — 5 navires en attente ·
+        <span class="ticker-highlight">MARITIME WEATHER</span> Mer d'Arabie : houle 4-5m / vent 28kt NE ·
+        <span class="ticker-alert">⚠ TAÏWAN</span> · NOTAM actif Z-4481 espace aérien restreint ·
+        <span class="ticker-highlight">BOSPHORE</span> · Trafic ralenti — 19 navires en file — délai estimé 14h ·
+        SUEZ CANAL AUTHORITY · dragage préventif voie principale suspend transit partiel 06h00-08h00 UTC
+      </div>
+    </div>
+
+    <div class="bottom-section" style="margin-top:32px;">
+      <div class="section-label">▸ Alertes Actives RSS</div>
+      <div id="dynamicAlerts">
+      <div class="alert-item">
+        <div class="alert-dot red"></div>
+        <div><div class="alert-text">HORMUZ · Activité militaire zone N — Déviation couloir S recommandée</div><div class="alert-time">14 min · Score 94</div></div>
+      </div>
+      <div class="alert-item">
+        <div class="alert-dot red"></div>
+<!-- MODAL EXFILTRATION -->
+<div class="modal-overlay" id="modalExfil">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modalExfil')">✕ FERMER</button>
+    <div class="modal-title red">⚠ PROTOCOLE EXFILTRATION — ÉQUIPAGE EN DANGER</div>
+    <div id="exfilContent"></div>
+  </div>
+</div>
+
+<!-- MODAL CONTOURNEMENT -->
+<div class="modal-overlay" id="modalReroute">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modalReroute')">✕ FERMER</button>
+    <div class="modal-title cyan">↻ CALCUL CONTOURNEMENT — ROUTES ALTERNATIVES</div>
+    <div id="rerouteContent"></div>
+  </div>
+</div>
+
+
+</body>
+</html>
+<script>
+// ============================================================
+// UTC CLOCK
+// ============================================================
+function updateClock() {
+  var now = new Date();
+  var h = String(now.getUTCHours()).padStart(2,'0');
+  var m = String(now.getUTCMinutes()).padStart(2,'0');
+  var s = String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('utcClock').textContent = 'UTC ' + h + ':' + m + ':' + s;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ============================================================
+// STRAITS CONFIG
+// ============================================================
+var STRAITS = {
+  hormuz:    { name:'HORMUZ',        bbox:[55.5,21.5,60.0,27.5],  svgX:615, svgY:190,
+    reroutes: ['Cap de Bonne-Esperance (+14 jours)', 'Route Nord via Oman (+3 jours)', 'Escorte militaire corridor S'],
+    ports: ['Dubaï — 45nm SW', 'Muscat — 120nm SE', 'Fujairah — 60nm E'],
+    risk: 94, smp: ['CONSTELLIS MARITIME','G4S MARITIME SECURITY','AMBREY'] },
+  bab:       { name:'BAB-EL-MANDEB', bbox:[42.0,10.5,45.5,14.5],  svgX:555, svgY:225,
+    reroutes: ['Cap de Bonne-Esperance (+18 jours)', 'Mouillage Djibouti port', 'Corridor EUNAVFOR recommande'],
+    ports: ['Djibouti — 30nm NW', 'Aden — 80nm N', 'Berbera — 150nm SE'],
+    risk: 87, smp: ['MAST MARITIME','MARITIME ASSET SECURITY','TRITON GROUP'] },
+  taiwan:    { name:'TAIWAN',        bbox:[119.5,22.0,122.5,27.0], svgX:830, svgY:155,
+    reroutes: ['Passage Luzon +2j', 'Route Japon-Philippines', 'Corridor Baschi nord Taiwan'],
+    ports: ['Kaohsiung — 50nm SW', 'Keelung — 80nm N', 'Manila — 300nm S'],
+    risk: 72, smp: ['CRISIS24','CONTROL RISKS','SICURAGLOBAL'] },
+  malacca:   { name:'MALACCA',       bbox:[99.5,1.0,104.5,6.5],    svgX:765, svgY:230,
+    reroutes: ['Détroit de Sunda +1j', 'Détroit de Lombok +2j', 'Escorte ReCAAP corridor'],
+    ports: ['Singapore — 80nm SE', 'Port Klang — 120nm N', 'Batam — 60nm S'],
+    risk: 61, smp: ['GARDA MARITIME','NEXUS AGORA','MARITIME SECURITY SERVICES'] },
+  bosphore:  { name:'BOSPHORE',      bbox:[28.5,40.5,29.5,42.5],   svgX:530, svgY:110,
+    reroutes: ['Attente Mer de Marmara', 'Transit nuit recommande', 'Mouillage Canakkale'],
+    ports: ['Istanbul — 5nm N', 'Izmit — 80nm E', 'Gelibolu — 120nm SW'],
+    risk: 48, smp: ['AEGIS MARITIME','SHIP SECURITY GROUP','TRITON'] },
+  suez:      { name:'SUEZ',          bbox:[32.0,29.5,33.5,31.5],   svgX:520, svgY:162,
+    reroutes: ['Cap de Bonne-Esperance +14j', 'Attente convoi Port Said', 'Transit prioritaire disponible'],
+    ports: ['Port Said — 80nm N', 'Suez City — 0nm', 'Ismailia — 50nm N'],
+    risk: 41, smp: ['MARITIME RISK INTERNATIONAL','DRYAD GLOBAL','AMBREY'] },
+  gibraltar: { name:'GIBRALTAR',     bbox:[-6.5,35.5,-4.5,36.5],   svgX:425, svgY:135,
+    reroutes: ['Route directe Atlantique', 'Mouillage Ceuta', 'Port Tanger Med 15nm E'],
+    ports: ['Tanger Med — 15nm E', 'Algeciras — 5nm N', 'Gibraltar — 0nm'],
+    risk: 18, smp: ['MARITIME INTELLIGENCE','NEPTUNE MARITIME SECURITY'] },
+  dover:     { name:'DOVER',         bbox:[-2.5,50.5,2.5,51.5],    svgX:440, svgY:88,
+    reroutes: ['Route nord Ecosse +12h', 'Passage nuit recommande', 'TSS corridor B'],
+    ports: ['Dover — 0nm', 'Calais — 22nm E', 'Dunkerque — 40nm NE'],
+    risk: 12, smp: ['AMBREY','MARITIME INTELLIGENCE'] }
+};
+
+function lonLatToSVG(lon, lat) {
+  var x = ((lon + 180) / 360) * 1000;
+  var latRad = lat * Math.PI / 180;
+  var mercN = Math.log(Math.tan(Math.PI/4 + latRad/2));
+  var y = (500/2) - (500 * mercN / (2 * Math.PI));
+  return { x: x, y: y };
+}
+
+function getStraitForPosition(lon, lat) {
+  var keys = Object.keys(STRAITS);
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    var b = STRAITS[k].bbox;
+    if (lon >= b[0] && lon <= b[2] && lat >= b[1] && lat <= b[3]) return k;
+  }
+  return null;
+}
+
+function getVesselType(typeCode) {
+  var t = parseInt(typeCode) || 0;
+  if (t >= 80 && t <= 89) return { label:'TANKER', cls:'type-tanker' };
+  if (t >= 70 && t <= 79) return { label:'CARGO', cls:'type-cargo' };
+  if (t >= 20 && t <= 29) return { label:'CONTAINER', cls:'type-container' };
+  if (t === 35 || t === 36 || t === 37) return { label:'MILITAIRE', cls:'type-military' };
+  return { label:'AUTRE', cls:'type-other' };
+}
+
+// ============================================================
+// AIS STATE
+// ============================================================
+var ws = null;
+var vessels = {};
+var msgBuffer = 0;
+var isConnected = false;
+var activeStrait = null;
+
+setInterval(function() {
+  document.getElementById('statMsgRate').textContent = msgBuffer * 6;
+  msgBuffer = 0;
+}, 10000);
+
+function connectAIS() {
+  var apiKey = document.getElementById('apiKeyInput').value.trim();
+  if (!apiKey) { setAISStatus('error', 'Cle API requise'); return; }
+  if (ws) { ws.close(); ws = null; }
+  setAISStatus('connecting', 'Connexion AisStream...');
+  document.getElementById('btnConnect').disabled = true;
+  document.getElementById('aisStatusBadge').className = 'connecting';
+  document.getElementById('aisStatusBadge').textContent = '...';
+  ws = new WebSocket('wss://stream.aisstream.io/v0/stream');
+  ws.onopen = function() {
+    var bboxes = [];
+    Object.keys(STRAITS).forEach(function(k) {
+      var b = STRAITS[k].bbox;
+      bboxes.push([[b[1],b[0]],[b[3],b[2]]]);
+    });
+    ws.send(JSON.stringify({ APIKey: apiKey, BoundingBoxes: bboxes, FilterMessageTypes: ['PositionReport','ShipStaticData'] }));
+    isConnected = true;
+    setAISStatus('connected', 'AIS LIVE - 8 detroits actifs');
+    document.getElementById('aisStatusBadge').className = 'live';
+    document.getElementById('aisStatusBadge').textContent = 'LIVE';
+    document.getElementById('btnConnect').textContent = 'DISCONNECT';
+    document.getElementById('btnConnect').disabled = false;
+    document.getElementById('btnConnect').onclick = disconnectAIS;
+    document.getElementById('aisLiveBadge').style.display = 'flex';
+  };
+  ws.onmessage = function(ev) {
+    try { var d = JSON.parse(ev.data); handleAISMessage(d); msgBuffer++; } catch(e) {}
+  };
+  ws.onerror = function() {
+    setAISStatus('error', 'Erreur WebSocket');
+    document.getElementById('aisStatusBadge').className = 'error';
+    document.getElementById('aisStatusBadge').textContent = 'ERR';
+    document.getElementById('btnConnect').disabled = false;
+  };
+  ws.onclose = function() {
+    if (isConnected) setAISStatus('error', 'Connexion fermee');
+    isConnected = false;
+    document.getElementById('aisStatusBadge').className = 'pending';
+    document.getElementById('aisStatusBadge').textContent = 'OFF';
+    document.getElementById('btnConnect').textContent = 'CONNECT';
+    document.getElementById('btnConnect').disabled = false;
+    document.getElementById('btnConnect').onclick = connectAIS;
+  };
+}
+
+function disconnectAIS() {
+  isConnected = false;
+  if (ws) { ws.close(); ws = null; }
+  setAISStatus('', 'Deconnecte');
+}
+
+function setAISStatus(type, text) {
+  var el = document.getElementById('aisStatusText');
+  if (el) { el.textContent = text; el.className = 'ais-status ' + type; }
+}
+
+function handleAISMessage(data) {
+  var msgType = data.MessageType;
+  var meta = data.MetaData || {};
+  var mmsi = String(meta.MMSI || '');
+  if (!mmsi) return;
+  var lon = parseFloat(meta.longitude || 0);
+  var lat = parseFloat(meta.latitude || 0);
+  if (isNaN(lon) || isNaN(lat) || (lon === 0 && lat === 0)) return;
+  var strait = getStraitForPosition(lon, lat);
+  if (!strait) return;
+  if (msgType === 'PositionReport') {
+    var pos = (data.Message && data.Message.PositionReport) ? data.Message.PositionReport : {};
+    var speed = parseFloat(pos.Sog || 0).toFixed(1);
+    var course = parseFloat(pos.Cog || 0).toFixed(0);
+    if (!vessels[mmsi]) {
+      vessels[mmsi] = { name: meta.ShipName || ('MMSI-'+mmsi), lat: lat, lon: lon, speed: speed, course: course, type: 0, strait: strait };
+    } else {
+      vessels[mmsi].lat = lat; vessels[mmsi].lon = lon;
+      vessels[mmsi].speed = speed; vessels[mmsi].course = course;
+      vessels[mmsi].strait = strait;
+    }
+    updateVesselDot(mmsi);
+    scheduleUIUpdate();
+  }
+  if (msgType === 'ShipStaticData') {
+    var stat = (data.Message && data.Message.ShipStaticData) ? data.Message.ShipStaticData : {};
+    var typeCode = stat.Type || stat.ShipType || 0;
+    var shipName = (stat.Name || meta.ShipName || ('MMSI-'+mmsi)).trim();
+    if (!vessels[mmsi]) {
+      vessels[mmsi] = { name: shipName, lat: lat, lon: lon, speed: 0, course: 0, type: typeCode, strait: strait };
+    } else {
+      vessels[mmsi].type = typeCode; vessels[mmsi].name = shipName;
+    }
+    updateVesselDot(mmsi);
+    scheduleUIUpdate();
+  }
+}
+
+// ============================================================
+// MAP
+// ============================================================
+var mapContainer = document.getElementById('mapContainer');
+var vesselLayer = document.getElementById('vesselLayer');
+var aircraftLayer = document.getElementById('aircraftLayer');
+
+function getPixelPos(lon, lat) {
+  var svgEl = document.getElementById('worldMap');
+  var rect = svgEl.getBoundingClientRect();
+  var containerRect = mapContainer.getBoundingClientRect();
+  var pos = lonLatToSVG(lon, lat);
+  return {
+    x: pos.x * (rect.width / 1000) + (rect.left - containerRect.left),
+    y: pos.y * (rect.height / 500) + (rect.top - containerRect.top)
+  };
+}
+
+function updateVesselDot(mmsi) {
+  var v = vessels[mmsi];
+  if (!v) return;
+  var px = getPixelPos(v.lon, v.lat);
+  var vt = getVesselType(v.type);
+  var dot = document.getElementById('vessel-' + mmsi);
+  if (!dot) {
+    dot = document.createElement('div');
+    dot.id = 'vessel-' + mmsi;
+    dot.style.pointerEvents = 'auto';
+    dot.addEventListener('mouseenter', (function(id) { return function(e) { showVesselTooltip(e, id); }; })(mmsi));
+    dot.addEventListener('mouseleave', hideTooltips);
+    vesselLayer.appendChild(dot);
+  }
+  dot.className = 'vessel-dot ' + vt.cls;
+  dot.style.left = px.x + 'px';
+  dot.style.top = px.y + 'px';
+}
+
+// ============================================================
+// ADS-B
+// ============================================================
+var aircraft = {};
+var adsbTimer = null;
+var adsbActive = false;
+var adsbErrorCount = 0;
+var straitQueue = [];
+var straitQueueIdx = 0;
+
+function startADSB() {
+  if (adsbActive) return;
+  adsbActive = true;
+  fetchAllStraitsADSB();
+  adsbTimer = setInterval(fetchAllStraitsADSB, 30000);
+}
+
+function fetchAllStraitsADSB() {
+  straitQueue = Object.keys(STRAITS);
+  straitQueueIdx = 0;
+  fetchNextStrait();
+}
+
+function fetchNextStrait() {
+  if (straitQueueIdx >= straitQueue.length) { scheduleUIUpdate(); return; }
+  var key = straitQueue[straitQueueIdx++];
+  var b = STRAITS[key].bbox;
+  var url = 'https://opensky-network.org/api/states/all?lamin=' + b[1] + '&lomin=' + b[0] + '&lamax=' + b[3] + '&lomax=' + b[2];
+  fetch(url)
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data) {
+      adsbErrorCount = 0;
+      document.getElementById('adsbStatusBadge').className = 'live';
+      document.getElementById('adsbStatusBadge').textContent = 'LIVE';
+      if (data && data.states) {
+        data.states.forEach(function(s) {
+          var icao = s[0];
+          var lon = s[5]; var lat = s[6];
+          if (!lon || !lat || s[8]) return;
+          var strait = getStraitForPosition(lon, lat);
+          if (!strait) return;
+          aircraft[icao] = {
+            callsign: (s[1] || '').trim() || ('ICAO-'+icao),
+            lon: lon, lat: lat, alt: Math.round(s[7] || s[13] || 0),
+            speed: Math.round((s[9] || 0) * 1.944), heading: Math.round(s[10] || 0),
+            strait: strait, updated: Date.now()
+          };
+          updateAircraftDot(icao);
+        });
+      }
+      var now = Date.now();
+      Object.keys(aircraft).forEach(function(icao) {
+        if (now - aircraft[icao].updated > 90000) {
+          var dot = document.getElementById('aircraft-' + icao);
+          if (dot) dot.remove();
+          delete aircraft[icao];
+        }
+      });
+      setTimeout(fetchNextStrait, 400);
+    })
+    .catch(function() {
+      adsbErrorCount++;
+      if (adsbErrorCount >= 3) {
+        document.getElementById('adsbStatusBadge').className = 'error';
+        document.getElementById('adsbStatusBadge').textContent = 'ERR';
+      }
+      setTimeout(fetchNextStrait, 800);
+    });
+}
+
+function updateAircraftDot(icao) {
+  var ac = aircraft[icao];
+  if (!ac) return;
+  var px = getPixelPos(ac.lon, ac.lat);
+  var dot = document.getElementById('aircraft-' + icao);
+  if (!dot) {
+    dot = document.createElement('div');
+    dot.id = 'aircraft-' + icao;
+    dot.style.pointerEvents = 'auto';
+    dot.addEventListener('mouseenter', (function(id) { return function(e) { showAircraftTooltip(e, id); }; })(icao));
+    dot.addEventListener('mouseleave', hideTooltips);
+    aircraftLayer.appendChild(dot);
+  }
+  dot.className = 'aircraft-dot type-civil';
+  dot.style.left = px.x + 'px';
+  dot.style.top = px.y + 'px';
+  dot.style.setProperty('--hdg', ac.heading + 'deg');
+}
+
+window.addEventListener('resize', function() {
+  Object.keys(vessels).forEach(function(mmsi) { updateVesselDot(mmsi); });
+  Object.keys(aircraft).forEach(function(icao) { updateAircraftDot(icao); });
+});
+
+// ============================================================
+// RSS MODULE
+// ============================================================
+var KEYWORDS = {
+  hormuz:    { words: ['hormuz','iran','persian gulf','golfe persique','oman','gulf','irgc'], weight: 20 },
+  bab:       { words: ['bab','mandeb','houthi','yemen','red sea','mer rouge','djibouti'], weight: 20 },
+  taiwan:    { words: ['taiwan','strait','china sea','mer de chine','pla','beijing','taipei'], weight: 20 },
+  malacca:   { words: ['malacca','singapore','indonesia','malaysia','piracy'], weight: 15 },
+  bosphore:  { words: ['bosphore','bosporus','turkey','black sea','ukraine','russia'], weight: 15 },
+  suez:      { words: ['suez','egypt','canal','egypte'], weight: 15 },
+  gibraltar: { words: ['gibraltar','morocco','maroc','spain','tanger'], weight: 10 },
+  dover:     { words: ['dover','channel','manche','english channel','north sea'], weight: 10 }
+};
+
+var THREAT_WORDS = {
+  military:  { words: ['attack','missile','strike','bomb','war','conflict','military','troops','drone','attaque','guerre','conflit'], score: 30 },
+  political: { words: ['sanction','blockade','tension','crisis','embargo','threat','escalation'], score: 20 },
+  economic:  { words: ['oil','petrole','energy','shipping','tanker','cargo','disruption'], score: 15 },
+  piracy:    { words: ['piracy','pirate','hijack','seizure'], score: 25 }
+};
+
+var RSS_SOURCES = [
+  { name:'REUTERS',    url:'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.reuters.com/reuters/topNews' },
+  { name:'BBC',        url:'https://api.rss2json.com/v1/api.json?rss_url=http://feeds.bbci.co.uk/news/world/rss.xml' },
+  { name:'AL JAZEERA', url:'https://api.rss2json.com/v1/api.json?rss_url=https://www.aljazeera.com/xml/rss/all.xml' },
+  { name:'LLOYDS',     url:'https://api.rss2json.com/v1/api.json?rss_url=https://www.lloydslist.com/rss' }
+];
+
+var rssItems = [];
+var rssTimer = null;
+var rssActive = false;
+var rssFetchQueue = [];
+var rssFetchIdx = 0;
+
+function scoreArticle(title, description) {
+  var text = ((title || '') + ' ' + (description || '')).toLowerCase();
+  var totalScore = 0;
+  var detectedStrait = null;
+  var detectedThreat = null;
+  var maxStraitScore = 0;
+  Object.keys(KEYWORDS).forEach(function(k) {
+    var kw = KEYWORDS[k]; var hits = 0;
+    kw.words.forEach(function(w) { if (text.indexOf(w) !== -1) hits++; });
+    if (hits > 0) {
+      var s = hits * kw.weight;
+      if (s > maxStraitScore) { maxStraitScore = s; detectedStrait = k; }
+      totalScore += s;
+    }
+  });
+  var maxThreatScore = 0;
+  Object.keys(THREAT_WORDS).forEach(function(t) {
+    var tw = THREAT_WORDS[t]; var hits = 0;
+    tw.words.forEach(function(w) { if (text.indexOf(w) !== -1) hits++; });
+    if (hits > 0) {
+      var s = hits * tw.score;
+      totalScore += s;
+      if (s > maxThreatScore) { maxThreatScore = s; detectedThreat = t; }
+    }
+  });
+  return { score: Math.min(100, totalScore), strait: detectedStrait, threat: detectedThreat };
+}
+
+function startRSS() {
+  if (rssActive) return;
+  rssActive = true;
+  fetchAllRSS();
+  rssTimer = setInterval(fetchAllRSS, 300000);
+}
+
+function fetchAllRSS() {
+  rssFetchQueue = RSS_SOURCES.slice();
+  rssFetchIdx = 0;
+  fetchNextRSS();
+}
+
+function fetchNextRSS() {
+  if (rssFetchIdx >= rssFetchQueue.length) {
+    renderIntelFeed();
+    updateTicker();
+    document.getElementById('rssStatusBadge').className = 'live';
+    document.getElementById('rssStatusBadge').textContent = 'LIVE';
+    scheduleUIUpdate();
+    return;
+  }
+  var src = rssFetchQueue[rssFetchIdx++];
+  fetch(src.url)
+    .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+    .then(function(data) {
+      if (data && data.items) {
+        data.items.slice(0, 15).forEach(function(item) {
+          var a = scoreArticle(item.title, item.description);
+          if (a.score < 10) return;
+          if (!rssItems.find(function(i) { return i.title === item.title; })) {
+            rssItems.unshift({ title: item.title || '', source: src.name, score: a.score, strait: a.strait, threat: a.threat, link: item.link || '#', ago: timeAgo(item.pubDate) });
+          }
+        });
+        rssItems = rssItems.slice(0, 50);
+      }
+      setTimeout(fetchNextRSS, 600);
+    })
+    .catch(function() { setTimeout(fetchNextRSS, 600); });
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return 'RECENT';
+  var diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  if (diff < 1) return 'MAINTENANT';
+  if (diff < 60) return diff + ' MIN';
+  if (diff < 1440) return Math.floor(diff/60) + 'H';
+  return Math.floor(diff/1440) + 'J';
+}
+
+function getScoreColor(s) { return s >= 70 ? '#ff2a2a' : s >= 40 ? '#ff7a00' : s >= 20 ? '#ffd000' : '#00ff88'; }
+function getScoreClass(s) { return s >= 70 ? 'high' : s >= 40 ? 'medium' : 'low'; }
+
+function renderIntelFeed() {
+  var feedEl = document.getElementById('intelFeed');
+  if (!feedEl) return;
+  var sorted = rssItems.slice().sort(function(a,b) { return b.score - a.score; });
+  var filtered = activeStrait ? sorted.filter(function(i) { return i.strait === activeStrait; }) : sorted;
+  var top = filtered.slice(0, 8);
+  if (top.length === 0) {
+    feedEl.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--text-dim);text-align:center;padding:12px;">Chargement flux RSS...</div>';
+    return;
+  }
+  var html = '';
+  top.forEach(function(item) {
+    var col = getScoreColor(item.score);
+    var cls = getScoreClass(item.score);
+    var straitTag = item.strait ? (' · ' + STRAITS[item.strait].name) : '';
+    html += '<div class="intel-item" style="cursor:pointer;margin-bottom:6px;" onclick="window.open(\'' + item.link + '\',\'_blank\')">';
+    html += '<div class="intel-source">&#11041; ' + item.source + ' · ' + item.ago + straitTag + '</div>';
+    html += '<div class="intel-headline">' + item.title + '</div>';
+    html += '<div class="intel-score"><div class="score-bar"><div class="score-fill ' + cls + '" style="width:' + item.score + '%"></div></div><div class="score-val" style="color:' + col + '">' + item.score + '</div></div>';
+    html += '</div>';
+  });
+  feedEl.innerHTML = html;
+  triggerRSSAlerts(sorted);
+}
+
+function triggerRSSAlerts(sorted) {
+  var alertsEl = document.getElementById('dynamicAlerts');
+  if (!alertsEl) return;
+  var high = sorted.filter(function(i) { return i.score >= 70; }).slice(0, 3);
+  if (high.length === 0) return;
+  var html = '';
+  high.forEach(function(item) {
+    var col = item.score >= 85 ? 'red' : 'orange';
+    var sn = item.strait ? STRAITS[item.strait].name : 'GLOBAL';
+    html += '<div class="alert-item"><div class="alert-dot ' + col + '"></div><div><div class="alert-text">' + sn + ' · ' + item.title.substring(0,80) + '...</div><div class="alert-time">' + item.ago + ' · Score ' + item.score + ' · ' + item.source + '</div></div></div>';
+  });
+  alertsEl.innerHTML = html;
+}
+
+function updateTicker() {
+  var el = document.getElementById('tickerContent');
+  if (!el || rssItems.length === 0) return;
+  var html = '';
+  rssItems.slice(0, 12).forEach(function(item) {
+    var sn = item.strait ? STRAITS[item.strait].name : '';
+    var mark = item.score >= 70 ? '<span class="ticker-alert">&#9888; ' + sn + '</span> · ' : (sn ? '<span class="ticker-highlight">' + sn + '</span> · ' : '');
+    html += mark + item.title + ' · ';
+  });
+  el.innerHTML = html;
+}
+
+// ============================================================
+// EP5 — EXFILTRATION MODULE
+// ============================================================
+function openExfil() {
+  var s = activeStrait ? STRAITS[activeStrait] : STRAITS.hormuz;
+  var straitKey = activeStrait || 'hormuz';
+  var now = new Date();
+  var vesselCount = Object.values(vessels).filter(function(v) { return v.strait === straitKey; }).length;
+  var newsItems = rssItems.filter(function(i) { return i.strait === straitKey; }).slice(0, 2);
+
+  var html = '';
+
+  // Situation assessment
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">Evaluation de Situation — ' + s.name + '</div>';
+  html += '<div class="risk-grid">';
+  html += '<div class="risk-card"><div class="risk-card-val" style="color:' + getScoreColor(s.risk) + '">' + s.risk + '</div><div class="risk-card-label">SCORE RISQUE</div></div>';
+  html += '<div class="risk-card"><div class="risk-card-val" style="color:var(--cyan)">' + vesselCount + '</div><div class="risk-card-label">NAVIRES AIS</div></div>';
+  html += '<div class="risk-card"><div class="risk-card-val" style="color:var(--orange)">' + Object.values(aircraft).filter(function(a) { return a.strait === straitKey; }).length + '</div><div class="risk-card-label">AERONEFS</div></div>';
+  html += '</div>';
+  if (newsItems.length > 0) {
+    html += '<div style="background:var(--red-dim);border:1px solid rgba(255,42,42,0.3);padding:10px;margin-top:8px;">';
+    html += '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--red);letter-spacing:2px;margin-bottom:6px;">DERNIERE ALERTE RSS</div>';
+    html += '<div style="font-family:\'Rajdhani\',sans-serif;font-size:11px;color:var(--text-primary);">' + newsItems[0].title + '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // Ports refuges
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">Ports Refuge Disponibles</div>';
+  s.ports.forEach(function(port) {
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(0,30,60,0.4);">';
+    html += '<div style="width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;"></div>';
+    html += '<div style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--text-primary);">' + port + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // SMP disponibles
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">Societes Militaires Privees — Extraction Equipage</div>';
+  var etas = [18, 24, 36];
+  s.smp.forEach(function(smpName, idx) {
+    html += '<div class="smp-card">';
+    html += '<div><div class="smp-name">' + smpName + '</div><div class="smp-details">DISPONIBLE · REGION ' + s.name + ' · EXTRACTION MARITIME + AIR</div></div>';
+    html += '<div class="smp-eta">ETA ' + etas[idx] + 'H</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // Assurance
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">Evaluation Prime Assurance Maritime</div>';
+  html += '<table class="insurance-table">';
+  html += '<tr><th>COUVERTURE</th><th>PRIME NORMALE</th><th>PRIME ZONE RISQUE</th><th>STATUT</th></tr>';
+  var riskMult = (s.risk / 100 * 4 + 1).toFixed(1);
+  html += '<tr><td>Corps navire</td><td class="val">0.08%</td><td class="val">' + (0.08 * riskMult).toFixed(2) + '%</td><td class="' + (s.risk > 60 ? 'high' : 'med') + '">' + (s.risk > 60 ? 'MAJOREE' : 'MODEREE') + '</td></tr>';
+  html += '<tr><td>Responsabilite P&I</td><td class="val">USD 3,200/an</td><td class="val">USD ' + Math.round(3200 * riskMult).toLocaleString() + '/an</td><td class="' + (s.risk > 60 ? 'high' : 'med') + '">' + (s.risk > 60 ? 'MAJOREE' : 'MODEREE') + '</td></tr>';
+  html += '<tr><td>Risque de guerre</td><td class="val">0.01%</td><td class="val">' + (0.01 * riskMult * 2).toFixed(3) + '%</td><td class="' + (s.risk > 70 ? 'high' : s.risk > 40 ? 'med' : 'low') + '">' + (s.risk > 70 ? 'CRITIQUE' : s.risk > 40 ? 'ELEVEE' : 'NORMALE') + '</td></tr>';
+  html += '<tr><td>Equipage/CBRN</td><td class="val">USD 500/pers</td><td class="val">USD ' + Math.round(500 * riskMult) + '/pers</td><td class="' + (s.risk > 60 ? 'high' : 'low') + '">' + (s.risk > 60 ? 'MAJOREE' : 'NORMALE') + '</td></tr>';
+  html += '</table>';
+  html += '</div>';
+
+  // Actions
+  html += '<div class="modal-section">';
+  html += '<button class="btn-action red" onclick="closeModal(\'modalExfil\');openReroute()">&#8635; CALCULER CONTOURNEMENT</button>';
+  html += '<button class="btn-action green" onclick="alert(\'Alerte SMP envoyee via WhatsApp +212 7 62 30 45 52\')">&#9993; CONTACTER SMP</button>';
+  html += '<button class="btn-action cyan" onclick="window.open(\'mailto:nassad.sea@gmail.com?subject=ALERTE EXFILTRATION ' + s.name + '&body=Situation critique detectee au ' + s.name + '. Score risque: ' + s.risk + '/100. Action requise.\')">&#9993; EMAIL URGENCE</button>';
+  html += '</div>';
+
+  document.getElementById('exfilContent').innerHTML = html;
+  document.getElementById('modalExfil').classList.add('visible');
+}
+
+// ============================================================
+// EP5 — REROUTE MODULE
+// ============================================================
+function openReroute() {
+  var s = activeStrait ? STRAITS[activeStrait] : STRAITS.hormuz;
+  var straitKey = activeStrait || 'hormuz';
+
+  var html = '';
+
+  // Current situation
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">Situation Actuelle — ' + s.name + '</div>';
+  html += '<div style="display:flex;gap:12px;margin-bottom:12px;">';
+  html += '<div style="background:var(--bg-card);border:1px solid var(--border-dim);padding:10px 16px;flex:1;text-align:center;">';
+  html += '<div style="font-family:\'Orbitron\',sans-serif;font-size:20px;color:' + getScoreColor(s.risk) + ';font-weight:900;">' + s.risk + '</div>';
+  html += '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--text-dim);">RISQUE</div></div>';
+  var navCount = Object.values(vessels).filter(function(v) { return v.strait === straitKey; }).length;
+  html += '<div style="background:var(--bg-card);border:1px solid var(--border-dim);padding:10px 16px;flex:1;text-align:center;">';
+  html += '<div style="font-family:\'Orbitron\',sans-serif;font-size:20px;color:var(--cyan);font-weight:900;">' + navCount + '</div>';
+  html += '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--text-dim);">NAVIRES</div></div>';
+  var highAlerts = rssItems.filter(function(i) { return i.strait === straitKey && i.score >= 60; }).length;
+  html += '<div style="background:var(--bg-card);border:1px solid var(--border-dim);padding:10px 16px;flex:1;text-align:center;">';
+  html += '<div style="font-family:\'Orbitron\',sans-serif;font-size:20px;color:var(--red);font-weight:900;">' + highAlerts + '</div>';
+  html += '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--text-dim);">ALERTES RSS</div></div>';
+  html += '</div></div>';
+
+  // Routes alternatives
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">Routes de Contournement Disponibles</div>';
+
+  var routeClasses = ['recommended','alternative','emergency'];
+  var routeBadges = ['safe','moderate','high'];
+  var routeLabels = ['RECOMMANDEE','ALTERNATIVE','URGENCE'];
+  var routeIcons = ['↻','→','⚠'];
+  var costs = ['+8%','+15%','+32%'];
+  var delays = [s.reroutes[0].match(/\+[\d]+ j/) ? s.reroutes[0].match(/\+[\d]+ j/)[0] : '+1-3j', '+1j', 'IMMEDIAT'];
+
+  s.reroutes.forEach(function(route, idx) {
+    html += '<div class="route-option ' + routeClasses[idx] + '">';
+    html += '<div class="route-name">' + routeIcons[idx] + ' ' + route + ' <span class="route-badge ' + routeBadges[idx] + '">' + routeLabels[idx] + '</span></div>';
+    html += '<div class="route-details">';
+    html += 'Delai supplementaire: <strong style="color:var(--text-primary)">' + delays[idx] + '</strong> · ';
+    html += 'Surcout carburant: <strong style="color:var(--text-primary)">' + costs[idx] + '</strong> · ';
+    html += 'Niveau securite: <strong style="color:' + (idx === 0 ? 'var(--green)' : idx === 1 ? 'var(--gold)' : 'var(--red)') + '">' + (idx === 0 ? 'ELEVE' : idx === 1 ? 'MODERE' : 'MINIMUM') + '</strong>';
+    html += '</div></div>';
+  });
+  html += '</div>';
+
+  // Navires impactes
+  var impactedVessels = Object.values(vessels).filter(function(v) { return v.strait === straitKey; });
+  if (impactedVessels.length > 0) {
+    html += '<div class="modal-section">';
+    html += '<div class="modal-section-title">Navires Impactes (' + impactedVessels.length + ')</div>';
+    html += '<table class="insurance-table"><tr><th>NAVIRE</th><th>TYPE</th><th>VITESSE</th><th>RECOMMANDATION</th></tr>';
+    impactedVessels.slice(0, 6).forEach(function(v) {
+      var vt = getVesselType(v.type);
+      var rec = parseFloat(v.speed) < 0.5 ? 'EVACUATION PRIORITAIRE' : (s.risk > 70 ? 'DEVIATION IMMEDIATE' : 'SURVEILLANCE');
+      var recColor = parseFloat(v.speed) < 0.5 ? 'high' : (s.risk > 70 ? 'med' : 'low');
+      html += '<tr><td class="val">' + v.name + '</td><td>' + vt.label + '</td><td>' + v.speed + ' kt</td><td class="' + recColor + '">' + rec + '</td></tr>';
+    });
+    html += '</table></div>';
+  }
+
+  // Contact rapide
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">Contact Rapide</div>';
+  html += '<button class="btn-action red" onclick="openExfil()">⚠ PROTOCOLE EXFILTRATION</button>';
+  html += '<button class="btn-action green" onclick="window.open(\'https://wa.me/212762304552?text=ALERTE CONTOURNEMENT ' + s.name + ' - Score risque ' + s.risk + '/100 - Action requise\',\'_blank\')">&#128241; WHATSAPP OPERATEUR</button>';
+  html += '<button class="btn-action cyan" onclick="window.open(\'mailto:nassad.sea@gmail.com?subject=CONTOURNEMENT ' + s.name + '&body=Demande de contournement ' + s.name + '. Risque: ' + s.risk + '/100.\')">&#9993; EMAIL</button>';
+  html += '</div>';
+
+  document.getElementById('rerouteContent').innerHTML = html;
+  document.getElementById('modalReroute').classList.add('visible');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('visible');
+}
+
+// Close modal on overlay click
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal-overlay')) {
+    e.target.classList.remove('visible');
+  }
+});
+
+// ============================================================
+// TOOLTIPS
+// ============================================================
+function showVesselTooltip(e, mmsi) {
+  var v = vessels[mmsi];
+  if (!v) return;
+  var vt = getVesselType(v.type);
+  var tt = document.getElementById('vesselTooltip');
+  document.getElementById('vt-name').textContent = v.name || ('MMSI ' + mmsi);
+  document.getElementById('vt-mmsi').textContent = mmsi;
+  document.getElementById('vt-type').textContent = vt.label;
+  document.getElementById('vt-speed').textContent = v.speed + ' kts';
+  document.getElementById('vt-course').textContent = v.course + 'deg';
+  document.getElementById('vt-strait').textContent = (STRAITS[v.strait] && STRAITS[v.strait].name) ? STRAITS[v.strait].name : '-';
+  var rect = mapContainer.getBoundingClientRect();
+  tt.style.left = (e.clientX - rect.left + 12) + 'px';
+  tt.style.top = (e.clientY - rect.top + 12) + 'px';
+  tt.classList.add('visible');
+}
+
+function showAircraftTooltip(e, icao) {
+  var ac = aircraft[icao];
+  if (!ac) return;
+  var tt = document.getElementById('vesselTooltip');
+  document.getElementById('vt-name').textContent = ac.callsign;
+  document.getElementById('vt-mmsi').textContent = icao.toUpperCase();
+  document.getElementById('vt-type').textContent = 'AERONEF';
+  document.getElementById('vt-speed').textContent = ac.speed + ' kts';
+  document.getElementById('vt-course').textContent = ac.heading + 'deg';
+  document.getElementById('vt-strait').textContent = (STRAITS[ac.strait] && STRAITS[ac.strait].name) ? STRAITS[ac.strait].name : '-';
+  var altEl = document.getElementById('vt-alt');
+  if (altEl) altEl.textContent = ac.alt + ' m';
+  var rect = mapContainer.getBoundingClientRect();
+  tt.style.left = (e.clientX - rect.left + 12) + 'px';
+  tt.style.top = (e.clientY - rect.top + 12) + 'px';
+  tt.classList.add('visible');
+}
+
+function hideTooltips() {
+  var tt1 = document.getElementById('vesselTooltip');
+  var tt2 = document.getElementById('mapTooltip');
+  if (tt1) tt1.classList.remove('visible');
+  if (tt2) tt2.classList.remove('visible');
+}
+
+function showTooltip(e, name, pos, traffic, risk) {
+  var tt = document.getElementById('mapTooltip');
+  document.getElementById('tt-name').textContent = name;
+  document.getElementById('tt-pos').textContent = pos;
+  document.getElementById('tt-traffic').textContent = traffic;
+  document.getElementById('tt-risk').textContent = risk;
+  var rect = mapContainer.getBoundingClientRect();
+  tt.style.left = (e.clientX - rect.left + 15) + 'px';
+  tt.style.top = (e.clientY - rect.top + 15) + 'px';
+  tt.classList.add('visible');
+}
+function hideTooltip() { hideTooltips(); }
+
+// ============================================================
+// FOCUS STRAIT
+// ============================================================
+function focusStrait(id) {
+  activeStrait = id;
+  document.querySelectorAll('.strait-card').forEach(function(c) { c.classList.remove('active'); });
+  var card = document.getElementById('card-' + id);
+  if (card) card.classList.add('active');
+  renderIntelFeed();
+}
+
+// ============================================================
+// UI UPDATE
+// ============================================================
+var uiTimer = null;
+function scheduleUIUpdate() {
+  if (uiTimer) return;
+  uiTimer = setTimeout(doUpdateUI, 500);
+}
+
+function doUpdateUI() {
+  uiTimer = null;
+  var vesselArr = Object.entries(vessels);
+  var total = vesselArr.length;
+  var acTotal = Object.keys(aircraft).length;
+
+  document.getElementById('vesselCountHeader').textContent = total;
+  document.getElementById('vesselCountHeader').className = total > 0 ? 'live' : 'pending';
+  document.getElementById('aisVesselCount').textContent = total;
+  document.getElementById('statTotal').textContent = total;
+
+  var acHeader = document.getElementById('acCountHeader');
+  if (acHeader) { acHeader.textContent = acTotal; acHeader.className = acTotal > 0 ? 'live' : 'pending'; }
+
+  var tankers = 0, stopped = 0;
+  Object.values(vessels).forEach(function(v) {
+    if (getVesselType(v.type).cls === 'type-tanker') tankers++;
+    if (parseFloat(v.speed) < 0.5) stopped++;
+  });
+  document.getElementById('statTankers').textContent = tankers;
+  document.getElementById('statAlerts').textContent = stopped;
+
+  var acStatEl = document.getElementById('statAircraft');
+  if (acStatEl) acStatEl.textContent = acTotal;
+
+  var rssStatEl = document.getElementById('statRSS');
+  if (rssStatEl) rssStatEl.textContent = rssItems.length;
+
+  Object.keys(STRAITS).forEach(function(sk) {
+    var el = document.getElementById('count-' + sk);
+    var acEl = document.getElementById('acount-' + sk);
+    if (el) {
+      var cnt = Object.values(vessels).filter(function(v) { return v.strait === sk; }).length;
+      el.textContent = cnt > 0 ? cnt : '-';
+      if (cnt > 0) el.style.color = 'var(--green)';
+    }
+    if (acEl) {
+      var acnt = Object.values(aircraft).filter(function(a) { return a.strait === sk; }).length;
+      acEl.textContent = acnt > 0 ? acnt : '-';
+      if (acnt > 0) acEl.style.color = '#00cfff';
+    }
+  });
+
+  var listEl = document.getElementById('aisVesselList');
+  if (listEl) {
+    if (vesselArr.length === 0 && acTotal === 0) {
+      listEl.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--text-dim);text-align:center;padding:8px;">En attente de donnees...</div>';
+    } else {
+      var html = '';
+      vesselArr.slice(-6).reverse().forEach(function(entry) {
+        var lv = entry[1], lmmsi = entry[0];
+        var sn = (STRAITS[lv.strait] && STRAITS[lv.strait].name) ? STRAITS[lv.strait].name : '-';
+        html += '<div class="vessel-row"><span class="vessel-name">' + (lv.name || lmmsi) + '</span><span class="vessel-type" style="font-size:9px;">' + sn + '</span><span class="vessel-status transiting">' + lv.speed + ' kt</span></div>';
+      });
+      Object.entries(aircraft).slice(-3).forEach(function(entry) {
+        var ac = entry[1];
+        var sn = (STRAITS[ac.strait] && STRAITS[ac.strait].name) ? STRAITS[ac.strait].name : '-';
+        html += '<div class="vessel-row"><span class="vessel-name" style="color:#00cfff;">&#9992; ' + ac.callsign + '</span><span class="vessel-type" style="font-size:9px;">' + sn + '</span><span class="vessel-status transiting" style="background:rgba(0,207,255,0.1);color:#00cfff;border-color:rgba(0,207,255,0.2);">' + ac.alt + 'm</span></div>';
+      });
+      listEl.innerHTML = html;
+    }
+  }
+
+  var recentEl = document.getElementById('recentVessels');
+  if (recentEl && vesselArr.length > 0) {
+    var recentHTML = '';
+    vesselArr.slice(-4).reverse().forEach(function(entry) {
+      var rv = entry[1];
+      var rvt = getVesselType(rv.type);
+      var sc = parseFloat(rv.speed) < 0.5 ? 'anchored' : 'transiting';
+      var st = parseFloat(rv.speed) < 0.5 ? 'ATTENTE' : 'TRANSIT';
+      recentHTML += '<div class="vessel-row"><span class="vessel-name">' + (rv.name || entry[0]).substring(0,14) + '</span><span class="vessel-type">' + rvt.label + '</span><span class="vessel-status ' + sc + '">' + st + '</span></div>';
+    });
+    recentEl.innerHTML = recentHTML;
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', function() {
+  document.querySelectorAll('.score-fill').forEach(function(el) {
+    var w = el.style.width;
+    el.style.width = '0%';
+    setTimeout(function() { el.style.width = w; }, 300);
+  });
+  document.getElementById('apiKeyInput').value = 'f89b0c224b2063f203efd0984dd4a58318152573';
+  setTimeout(connectAIS, 800);
+  setTimeout(startADSB, 3000);
+  setTimeout(startRSS, 2000);
+});
+</script>
+</body>
+</html>
